@@ -21,9 +21,7 @@ AF_DCMotor motor4(3);
 #define PinS22 32
 #define PinS32 33
 
-
 //////////////////////////////////////////////
-
 
 // Definição do Pino do Sensor IR
 const int PinInfravermelho = A15;
@@ -47,9 +45,7 @@ long distancia;
 const unsigned long stopDuration = 1000;
 const int limiarDistancia = 15;
 
-
 //////////////////////////////////////////////
-
 
 void setup() {
   // Inicialização da Comunicação Serial
@@ -75,9 +71,7 @@ void setup() {
   pinMode(PinInfravermelho, INPUT);
 }
 
-
 //////////////////////////////////////////////
-
 
 void loop() {
   // Medição da Distância pelo Sensor Ultrassônico
@@ -87,22 +81,11 @@ void loop() {
   Serial.println(" cm");
 
   // Decisão Baseada na Distância Medida
-  if (distancia <= limiarDistancia) {
-    Serial.println("Objeto detectado à frente. Parando e desviando...");
-    pararMotores();
-    delay(stopDuration);
-    desviar();
-  } else {
-    Serial.println("Caminho livre. Seguindo a linha...");
-    seguirLinha();
-  }
-
-  delay(100);
+  seguirLinha();
+  delay(1000);
 }
 
-
 //////////////////////////////////////////////
-
 
 void seguirLinha() {
   // Leitura dos Sensores de Cor e IR
@@ -116,57 +99,81 @@ void seguirLinha() {
   Serial.print(" G: "); Serial.print(green2); Serial.print(" B: "); Serial.println(blue2);
   Serial.print("Leitura do Sensor IR: "); Serial.println(infravermelho);
 
-  // Decisão Baseada na Leitura Atual e Anterior dos Sensores
+  // Decisão Baseada na Leitura Atual e Anterior dos Sensores - Priorizando Interseção
   if (isIntersecao()) {
     Serial.println("Interseção detectada. Decidindo ação...");
-    if (isVerde(red1, green1, blue1) && isVerde(red2, green2, blue2)) {
-      Serial.println("Ambos os sensores leem Verde. Virando 180 graus.");
+
+    // Situação 1
+    if (isVerde(red1, green1, blue1) && isVerde(red2, green2, blue2) && isPretoInfravermelho()) {
+      Serial.println("Situação 1: Ambos Verde, IR Preto. Virando 180 graus.");
       virarEm180();
-    } else if (isBranco(red1, green1, blue1) && isVerde(red2, green2, blue2)) {
-      Serial.println("Esquerda Branco, Direita Verde. Virando à direita.");
+    }
+    // Situação 2
+    else if (isBranco(red1, green1, blue1) && isVerde(red2, green2, blue2) && isPretoInfravermelho()) {
+      Serial.println("Situação 2: Esquerda Branco, Direita Verde, IR Preto. Virando à direita.");
       virarDireita();
-    } else if (isVerde(red1, green1, blue1) && isBranco(red2, green2, blue2)) {
-      Serial.println("Esquerda Verde, Direita Branco. Virando à esquerda.");
+    }
+    // Situação 3
+    else if (isVerde(red1, green1, blue1) && isBranco(red2, green2, blue2) && isPretoInfravermelho()) {
+      Serial.println("Situação 3: Esquerda Verde, Direita Branco, IR Preto. Virando à esquerda.");
       virarEsquerda();
-    } else if (isPreto(red1, green1, blue1) && isPreto(red2, green2, blue2) &&
-               isBranco(prevRed1, prevGreen1, prevBlue1) && isBranco(prevRed2, prevGreen2, prevBlue2)) {
-      Serial.println("Ambos Preto agora, ambos Branco antes. Seguindo em frente.");
+    }
+    // Situação 4
+    else if (isPreto(red1, green1, blue1) && isPreto(red2, green2, blue2) && isPretoInfravermelho() &&
+             isBranco(prevRed1, prevGreen1, prevBlue1) && isBranco(prevRed2, prevGreen2, prevBlue2)) {
+      Serial.println("Situação 4: Ambos Preto agora, Branco antes. Seguindo em frente.");
       norte();
-    } else if (isBranco(red1, green1, blue1) && isPreto(red2, green2, blue2) &&
-               isBranco(prevRed1, prevGreen1, prevBlue1) && isBranco(prevRed2, prevGreen2, prevBlue2)) {
-      Serial.println("Esquerda Branco, Direita Preto agora, ambos Branco antes. Seguindo em frente.");
+    }
+    // Situação 6
+    else if (isBranco(red1, green1, blue1) && isPreto(red2, green2, blue2) && isPretoInfravermelho() &&
+             isBranco(prevRed1, prevGreen1, prevBlue1) && isBranco(prevRed2, prevGreen2, prevBlue2)) {
+      Serial.println("Situação 6: Esquerda Branco, Direita Preto agora, Branco antes. Seguindo em frente.");
       norte();
-    } else if (isPreto(red1, green1, blue1) && isBranco(red2, green2, blue2) &&
-               isBranco(prevRed1, prevGreen1, prevBlue1) && isBranco(prevRed2, prevGreen2, prevBlue2)) {
-      Serial.println("Esquerda Preto, Direita Branco agora, ambos Branco antes. Seguindo em frente.");
+    }
+    // Situação 7
+    else if (isPreto(red1, green1, blue1) && isBranco(red2, green2, blue2) && isPretoInfravermelho() &&
+             isBranco(prevRed1, prevGreen1, prevBlue1) && isBranco(prevRed2, prevGreen2, prevBlue2)) {
+      Serial.println("Situação 7: Esquerda Preto, Direita Branco agora, Branco antes. Seguindo em frente.");
       norte();
-    } else if (isVerde(red1, green1, blue1) && isBranco(red2, green2, blue2) &&
-               isPreto(prevRed1, prevGreen1, prevBlue1) && isPreto(prevRed2, prevGreen2, prevBlue2)) {
-      Serial.println("Esquerda Verde, Direita Branco agora, ambos Preto antes. Seguindo em frente.");
+    }
+    // Situação 8
+    else if (isVerde(red1, green1, blue1) && isBranco(red2, green2, blue2) && isPretoInfravermelho() &&
+             isPreto(prevRed1, prevGreen1, prevBlue1) && isPreto(prevRed2, prevGreen2, prevBlue2)) {
+      Serial.println("Situação 8: Esquerda Verde agora, Preto antes. Seguindo em frente.");
       norte();
-    } else if (isBranco(red1, green1, blue1) && isVerde(red2, green2, blue2) &&
-               isPreto(prevRed1, prevGreen1, prevBlue1) && isPreto(prevRed2, prevGreen2, prevBlue2)) {
-      Serial.println("Esquerda Branco, Direita Verde agora, ambos Preto antes. Seguindo em frente.");
+    }
+    // Situação 9
+    else if (isBranco(red1, green1, blue1) && isVerde(red2, green2, blue2) && isPretoInfravermelho() &&
+             isPreto(prevRed1, prevGreen1, prevBlue1) && isPreto(prevRed2, prevGreen2, prevBlue2)) {
+      Serial.println("Situação 9: Direita Verde agora, Preto antes. Seguindo em frente.");
       norte();
     }
   } else {
-    // Continuar a seguir a linha normalmente
-    Serial.println("Seguindo a linha normalmente...");
-    if (isPreto(red1, green1, blue1) && isPreto(red2, green2, blue2)) {
-      Serial.println("Ambos os sensores leem Preto. Seguindo em frente.");
-      norte();
-    } else if (isBranco(red1, green1, blue1) && isBranco(red2, green2, blue2)) {
-      Serial.println("Ambos os sensores leem Branco. Parando.");
-      pararMotores();
-    } else if (isVerde(red1, green1, blue1)) {
-      Serial.println("Sensor Esquerdo Verde. Virando à esquerda.");
-      virarEsquerda();
-    } else if (isVerde(red2, green2, blue2)) {
-      Serial.println("Sensor Direito Verde. Virando à direita.");
-      virarDireita();
+    // Lógica para ajuste leve baseado na detecção de preto por um único sensor
+    if (isPreto(red1, green1, blue1) && isBranco(red2, green2, blue2)) {
+      Serial.println("Sensor Esquerdo Preto, Sensor Direito Branco. Ajustando levemente à esquerda.");
+      ajustarLevementeEsquerda();
+    } else if (isBranco(red1, green1, blue1) && isPreto(red2, green2, blue2)) {
+      Serial.println("Sensor Esquerdo Branco, Sensor Direito Preto. Ajustando levemente à direita.");
+      ajustarLevementeDireita();
     } else {
-      Serial.println("Nenhuma condição específica. Seguindo em frente.");
-      norte();
+      // Continuar a seguir a linha normalmente
+      if (isPreto(red1, green1, blue1) && isPreto(red2, green2, blue2)) {
+        Serial.println("Ambos os sensores leem Preto");
+        norte();
+      } else if (isBranco(red1, green1, blue1) && isBranco(red2, green2, blue2)) {
+        Serial.println("Ambos os sensores leem Branco. Seguindo em frente.");
+        norte();
+      } else if (isVerde(red1, green1, blue1)) {
+        Serial.println("Sensor Esquerdo Verde. Virando à esquerda.");
+        virarEsquerda();
+      } else if (isVerde(red2, green2, blue2)) {
+        Serial.println("Sensor Direito Verde. Virando à direita.");
+        virarDireita();
+      } else {
+        Serial.println("Nenhuma condição específica. Seguindo em frente.");
+        norte();
+      }
     }
   }
 
@@ -210,9 +217,7 @@ void lerSensoresDeCor() {
   blue2 = pulseIn(PinOUT2, LOW);
 }
 
-
 //////////////////////////////////////////////
-
 
 bool isIntersecao() {
   return infravermelho == LOW;
@@ -230,15 +235,17 @@ bool isVerde(int red, int green, int blue) {
   return green < red && green < blue;
 }
 
+bool isPretoInfravermelho() {
+  return infravermelho == LOW;
+}
 
 //////////////////////////////////////////////
 
-
 void norte() {
-  motor1.setSpeed(255);
-  motor2.setSpeed(255);
-  motor3.setSpeed(255);
-  motor4.setSpeed(255);
+  motor1.setSpeed(60);
+  motor2.setSpeed(60);
+  motor3.setSpeed(60);
+  motor4.setSpeed(60);
 
   motor1.run(FORWARD);
   motor2.run(FORWARD);
@@ -259,10 +266,10 @@ void pararMotores() {
 }
 
 void virarDireita() {
-  motor1.setSpeed(200);
-  motor2.setSpeed(200);
-  motor3.setSpeed(200);
-  motor4.setSpeed(200);
+  motor1.setSpeed(60);
+  motor2.setSpeed(60);
+  motor3.setSpeed(60);
+  motor4.setSpeed(60);
 
   motor1.run(FORWARD);
   motor2.run(FORWARD);
@@ -273,10 +280,10 @@ void virarDireita() {
 }
 
 void virarEsquerda() {
-  motor1.setSpeed(200);
-  motor2.setSpeed(200);
-  motor3.setSpeed(200);
-  motor4.setSpeed(200);
+  motor1.setSpeed(60);
+  motor2.setSpeed(60);
+  motor3.setSpeed(60);
+  motor4.setSpeed(60);
 
   motor1.run(BACKWARD);
   motor2.run(BACKWARD);
@@ -292,10 +299,10 @@ void virarEm180() {
 }
 
 void desviar() {
-  motor1.setSpeed(200);
-  motor2.setSpeed(200);
-  motor3.setSpeed(200);
-  motor4.setSpeed(200);
+  motor1.setSpeed(60);
+  motor2.setSpeed(60);
+  motor3.setSpeed(60);
+  motor4.setSpeed(60);
 
   // Movimento de desvio para a direita
   motor1.run(FORWARD);
@@ -312,4 +319,32 @@ void desviar() {
   motor4.run(FORWARD);
 
   delay(1000);
+}
+
+void ajustarLevementeEsquerda() {
+  motor1.setSpeed(50); //m1
+  motor2.setSpeed(60); //m4
+  motor3.setSpeed(50); //m2
+  motor4.setSpeed(60); //m3
+
+  motor1.run(FORWARD);
+  motor2.run(FORWARD);
+  motor3.run(FORWARD);
+  motor4.run(FORWARD);
+
+  delay(600); // Ajuste fino, tempo curto
+}
+
+void ajustarLevementeDireita() {
+  motor1.setSpeed(60); //m1
+  motor2.setSpeed(50); //m4
+  motor3.setSpeed(60); //m2
+  motor4.setSpeed(50);  //m3 
+
+  motor1.run(FORWARD);
+  motor2.run(FORWARD);
+  motor3.run(FORWARD);
+  motor4.run(FORWARD);
+
+  delay(600); // Ajuste fino, tempo curto
 }
