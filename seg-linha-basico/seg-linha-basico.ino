@@ -1,12 +1,15 @@
-#include <AFMotor.h>
+#include <Stepper.h>
 
-// Motores dianteiros DIR e ESQ
-AF_DCMotor motor1(1);
-AF_DCMotor motor2(4);
+// Número de passos necessários para completar uma revolução
+const int stepsPerRevolution = 2048;
+const int stepsToMove = 1;
 
-// Motores traseiros DIR e ESQ
-AF_DCMotor motor3(2); 
-AF_DCMotor motor4(3); 
+// Inicialização dos motores de passo
+//IN1 - IN3 - IN2 - IN4
+Stepper motor1 = Stepper(stepsPerRevolution, 36, 38, 37, 39); //para trás
+Stepper motor2 = Stepper(stepsPerRevolution, 40, 42, 41, 43);
+Stepper motor3 = Stepper(stepsPerRevolution, 44, 46, 45, 47); //para trás
+Stepper motor4 = Stepper(stepsPerRevolution, 48, 50, 49, 51);
 
 //Sensores de cor
 #define PinOUT1 34
@@ -32,11 +35,6 @@ AF_DCMotor motor4(3);
 int red1, green1, blue1;
 int red2, green2, blue2;
 
-const unsigned long moveDuration = 1000; // Duração do movimento em milissegundos
-const unsigned long stopDuration = 1000; // Tempo para parar os motores antes de iniciar o próximo movimento
-const unsigned long moveCorrection = 300; // Duração do movimento de correção de rota em milissegundos
-
-
 
 void setup()
 {
@@ -51,11 +49,10 @@ void setup()
   Serial.begin(9600);  // Inicia o monitor Serial com velocidade de 9600
 
   // Define a velocidade maxima para os motores 1 e 2
-  motor1.setSpeed(0); // M1 
-  motor2.setSpeed(0); // M4
-  motor3.setSpeed(0); // M2
-  motor4.setSpeed(0); // M3
-
+  motor1.setSpeed(25);
+  motor2.setSpeed(25);
+  motor3.setSpeed(25);
+  motor4.setSpeed(25);
   pararMotores();
 
 }
@@ -67,21 +64,21 @@ void loop()
   int corSensor1 = leituraCorSensor1();
   int corSensor2 = leituraCorSensor2();
 
-  if (corSensor1 == COR_PRETO && corSensor2 == COR_PRETO) {
-    norte();
-  } else if (corSensor1 == COR_BRANCO && corSensor2 == COR_BRANCO) {
-    norte();
-  } else if (corSensor1 == COR_VERMELHO && corSensor2 == COR_VERMELHO){
-    pararMotores();
-  } else if(corSensor1 == COR_PRETO && corSensor2 == COR_BRANCO){
-    correcaoEsquerda();
-  } else if (corSensor1 == COR_BRANCO && corSensor2 == COR_PRETO){
-    correcaoDireita();
-  } else if (corSensor1 == COR_VERDE && corSensor2 == COR_BRANCO){
-    norte();
-    delay(moveCorrection);
-    correcaoEsquerda();
-    delay(moveCorrection);
+  // Executa os passos dos motores simultaneamente
+  for (int i = 0; i < stepsPerRevolution; i += stepsToMove) {
+    if (corSensor1 == COR_PRETO && corSensor2 == COR_PRETO) {
+      norte();
+    } else if (corSensor1 == COR_BRANCO && corSensor2 == COR_BRANCO) {
+      norte();
+    } else if (corSensor1 == COR_VERMELHO && corSensor2 == COR_VERMELHO){
+      pararMotores();
+    } else if(corSensor1 == COR_PRETO && corSensor2 == COR_BRANCO){
+      correcaoEsquerda();
+    } else if (corSensor1 == COR_BRANCO && corSensor2 == COR_PRETO){
+      correcaoDireita();
+    } else if (corSensor1 == COR_VERDE || corSensor1 == COR_AZUL && corSensor2 == COR_BRANCO){
+      pararMotores();
+    }
   }
 
 
